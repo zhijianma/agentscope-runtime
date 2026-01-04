@@ -55,11 +55,11 @@
 >
 > | Framework/Feature                                            | Message/Event | Tool | Service |
 > | ------------------------------------------------------------ | ------------- | ---- | ------- |
-> | AgentScope                                                   | ✅             | ✅    | ✅       |
+> | [AgentScope](https://runtime.agentscope.io/en/quickstart.html) | ✅             | ✅    | ✅       |
 > | [LangGraph](https://runtime.agentscope.io/en/langgraph_guidelines.html) | ✅             | 🚧    | 🚧       |
-> | AutoGen                                                      | 🚧             | ✅    | 🚧       |
-> | Microsoft Agent Framework                                    | 🚧             | 🚧    | 🚧       |
+> | [Microsoft Agent Framework](https://runtime.agentscope.io/en/ms_agent_framework_guidelines.html) | ✅             | ✅    | 🚧       |
 > | [Agno](https://runtime.agentscope.io/en/agno_guidelines.html) | ✅             | ✅    | 🚧       |
+> | AutoGen                                                      | 🚧             | ✅    | 🚧       |
 
 ---
 
