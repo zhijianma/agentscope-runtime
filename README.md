@@ -1,6 +1,6 @@
 <div align="center">
 
-# AgentScope Runtime v1.0
+# AgentScope Runtime: A Production-grade Runtime for Agent Applications
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repo-black.svg?logo=github)](https://github.com/agentscope-ai/agentscope-runtime)
 [![WebUI](https://img.shields.io/badge/Try_WebUI-Online-green.svg?logo=googlechrome)](http://webui.runtime.agentscope.io/)
@@ -25,21 +25,24 @@
 [[中文README]](README_zh.md)
 [[Samples]](https://github.com/agentscope-ai/agentscope-samples)
 
-**AgentScope Runtime** is a **production-grade runtime** for agent applications.
-
-***Core capabilities:***
-
-***Tool Sandboxing** — tool call runs inside a **hardened sandbox***
-
-***Agent-as-a-Service (AaaS) APIs** — expose agents as **streaming, production-ready APIs***
-
-***Scalable Deployment** — deploy locally, on Kubernetes, or serverless for **elastic scale***
-
-***Plus:***
-
-***Full-stack observability** (logs / traces)*
-
-***Framework compatibility** with mainstream agent frameworks*
+> **Core capabilities:**
+>
+> **Tool Sandboxing** — tool call runs inside a **hardened sandbox**
+>
+> **Agent-as-a-Service (AaaS) APIs** — expose agents as **streaming, production-ready APIs**
+>
+> **Scalable Deployment** — deploy locally, on Kubernetes, or serverless for **elastic scale**
+>
+> <details>
+> <summary><b>Plus</b></summary>
+>
+> <br>
+>
+> **Full-stack observability** (logs / traces)
+>
+> **Framework compatibility** with mainstream agent frameworks
+>
+> </details>
 
 </div>
 
