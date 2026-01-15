@@ -89,19 +89,15 @@ async def adapt_langgraph_message_stream(
                             index=index,
                             data=FunctionCall(
                                 call_id=call_id,
-                                name=tool_call.get("name", ""),
-                                arguments=json.dumps(
-                                    tool_call.get("args", {}),
-                                    ensure_ascii=False,
-                                ),
+                                name=tool_call.get("name"),
+                                arguments=tool_call.get("args"),
                             ).model_dump(),
-                            delta=True,
                         )
 
                         data_content = plugin_call_message.add_delta_content(
                             new_content=data_content,
                         )
-                        yield data_content
+                        yield data_content.completed()
                         yield plugin_call_message.completed()
             else:
                 if has_tool_call_chunk:
@@ -163,18 +159,26 @@ async def adapt_langgraph_message_stream(
                 type=MessageType.PLUGIN_CALL_OUTPUT,
                 role="tool",
             )
+            tool_call_output = (
+                msg.content
+                if isinstance(msg.content, str)
+                else json.dumps(msg.content, ensure_ascii=False)
+            )
             # Create function call output data
             function_output_data = FunctionCallOutput(
                 call_id=msg.tool_call_id,
                 name=msg.name,
-                output=json.dumps(content, ensure_ascii=False),
+                output=tool_call_output,
             )
 
             data_content = DataContent(
-                index=None,
                 data=function_output_data.model_dump(),
+                msg_id=plugin_output_message.id,
             )
-            plugin_output_message.content = [data_content]
+            yield data_content.completed()
+            plugin_output_message.add_content(
+                data_content,
+            )
             yield plugin_output_message.completed()
         else:
             role = "assistant"
