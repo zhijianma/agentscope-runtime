@@ -9,13 +9,44 @@ from ..manager.sandbox_manager import SandboxManager
 from ..manager.server.app import get_config
 
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class SandboxBase:
     """
     Common base class for both sync and async Sandbox interfaces.
+
+    This class holds shared configuration and lifecycle behaviors used by
+    `Sandbox` (sync) and `SandboxAsync` (async). It can operate in:
+
+    - Embedded mode: `base_url` is not provided; a local `SandboxManager`
+      is used.
+    - Remote mode: `base_url` is provided; operations are delegated to a remote
+      `SandboxManager` over HTTP.
+
+    Args:
+        sandbox_id: Existing sandbox/container identifier to attach to. If not
+            provided, a new sandbox will be created when entering the context
+            manager.
+        timeout: HTTP request timeout in seconds for client-side calls to the
+            sandbox runtime/manager (e.g., `list_tools`, `call_tool`, and other
+            network requests). This parameter does not control sandbox idle,
+            recycle, or heartbeat timeouts, which are configured separately by
+            the sandbox runtime (for example via the `HEARTBEAT_TIMEOUT`
+            environment variable).
+        base_url: Remote SandboxManager service URL. If provided, the sandbox
+            runs in remote mode; otherwise, embedded mode is used.
+        bearer_token: Optional bearer token for authenticating to the remote
+            manager.
+        sandbox_type: Sandbox runtime type/image selection.
+
+    Attributes:
+        base_url: Remote manager URL, if any.
+        embed_mode: Whether the sandbox is running with an embedded local
+            manager.
+        sandbox_type: Selected sandbox type.
+        timeout: HTTP request timeout in seconds.
+        _sandbox_id: The bound sandbox id (may be None until created).
     """
 
     def __init__(
@@ -31,6 +62,7 @@ class SandboxBase:
         self.sandbox_type = sandbox_type
         self.timeout = timeout
         self._sandbox_id = sandbox_id
+        self._warned_sandbox_not_started = False
 
         if base_url:
             # Remote Manager
@@ -47,6 +79,14 @@ class SandboxBase:
 
     @property
     def sandbox_id(self) -> Optional[str]:
+        if self._sandbox_id is None and not self._warned_sandbox_not_started:
+            self._warned_sandbox_not_started = True
+            logger.error(
+                "Sandbox is not started yet (sandbox_id is None). "
+                "Use `with Sandbox(...) as sandbox:` / "
+                "`async with SandboxAsync(...) as sandbox:` "
+                "or call `start() / start_async()` first.",
+            )
         return self._sandbox_id
 
     @sandbox_id.setter
@@ -101,12 +141,17 @@ class SandboxBase:
 class Sandbox(SandboxBase):
     def __enter__(self):
         # Create sandbox if sandbox_id not provided
-        if self.sandbox_id is None:
-            self.sandbox_id = self.manager_api.create_from_pool(
+        if self._sandbox_id is None:
+            self._sandbox_id = self.manager_api.create_from_pool(
                 sandbox_type=SandboxType(self.sandbox_type).value,
             )
-            if self.sandbox_id is None:
-                raise RuntimeError("No sandbox available.")
+            if self._sandbox_id is None:
+                raise RuntimeError(
+                    "No sandbox available. This may happen if: "
+                    "(1) the sandbox pool is exhausted, "
+                    "(2) max sandbox instances limit has been reached, or "
+                    "(3) sandbox container startup failed. ",
+                )
             if self.embed_mode:
                 atexit.register(self._cleanup)
                 self._register_signal_handlers()
@@ -114,6 +159,14 @@ class Sandbox(SandboxBase):
 
     def __exit__(self, exc_type, exc_value, traceback):
         self._cleanup()
+
+    def start(self) -> "Sandbox":
+        """Explicitly start sandbox without context manager."""
+        return self.__enter__()
+
+    def close(self) -> None:
+        """Explicitly cleanup sandbox without context manager."""
+        self.__exit__(None, None, None)
 
     def get_info(self) -> dict:
         return self.manager_api.get_info(self.sandbox_id)
@@ -143,11 +196,11 @@ class Sandbox(SandboxBase):
 
 class SandboxAsync(SandboxBase):
     async def __aenter__(self):
-        if self.sandbox_id is None:
-            self.sandbox_id = await self.manager_api.create_from_pool_async(
+        if self._sandbox_id is None:
+            self._sandbox_id = await self.manager_api.create_from_pool_async(
                 sandbox_type=SandboxType(self.sandbox_type).value,
             )
-            if self.sandbox_id is None:
+            if self._sandbox_id is None:
                 raise RuntimeError("No sandbox available.")
             if self.embed_mode:
                 atexit.register(self._cleanup)
@@ -156,6 +209,14 @@ class SandboxAsync(SandboxBase):
 
     async def __aexit__(self, exc_type, exc_value, traceback):
         await self._cleanup_async()
+
+    async def start_async(self) -> "SandboxAsync":
+        """Explicitly start sandbox without async context manager."""
+        return await self.__aenter__()
+
+    async def close_async(self) -> None:
+        """Explicitly cleanup sandbox without async context manager."""
+        await self.__aexit__(None, None, None)
 
     async def _cleanup_async(self):
         try:
